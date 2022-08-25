@@ -112,3 +112,14 @@ def __evaluate_diagonals(grid) -> bool:
 
 def evaluate_positions(grid) -> bool:
     return __evaluate_columns(grid) and __evaluate_rows(grid) and __evaluate_diagonals(grid)
+
+def get_first_empty_column(grid):
+    rows = get_grid_width(grid)
+    columns = rows
+    for column_number in range(0,columns):
+        queens = 0 
+        for row_number in range(0,rows):
+            queens += grid[row_number][column_number]
+        if queens == 0:
+            return column_number
+    

@@ -11,6 +11,19 @@ def print_grid(grid : dict):
         for row_number in range(0,columns):
             print(grid[column_number][row_number], end ="|")
 
+def save_grid(grid : dict):
+    rows = get_grid_width(grid)
+    columns = rows
+    with open("solution.csv",'w', encoding = 'utf-8') as f:
+        for column_number in range(0,rows):
+            row = ""
+            for row_number in range(0,columns):
+                row += f"{grid[column_number][row_number]},"
+            row = row[:-1]
+            print(row)
+            f.write(row)
+            f.write('\n')
+
 def init_grid(width):
     grid = {}
     for column_number in range(0,width):

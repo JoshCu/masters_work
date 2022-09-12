@@ -1,5 +1,8 @@
 import helpers
 import sys
+import time
+
+sys.setrecursionlimit(10**6)
 
 def backtrack_grid(grid):
     '''
@@ -59,7 +62,6 @@ def place_next_queen(grid):
                 # by setting value back to zero
                     grid[row_number][column_number] = 0
                     
-
     return placed
 
 
@@ -69,11 +71,13 @@ def search_solutions(grid):
     if num_queens == grid_width:
         print("Solution Found!")
         helpers.print_grid(grid)
+        print('\n')
+        helpers.save_grid(grid)
         sys.exit(0)
     
     queen_placed = place_next_queen(grid)
-    print("--------")
-    helpers.print_grid(grid)
+    # print("--------")
+    # helpers.print_grid(grid)
 
     if num_queens < grid_width and not queen_placed:
         print("no solution found")
@@ -83,7 +87,7 @@ def search_solutions(grid):
 
 
 if __name__ == "__main__":
-    grid = helpers.init_grid(8)
+    grid = helpers.init_grid(6)
 
     helpers.print_grid(grid)
     search_solutions(grid)

@@ -52,7 +52,8 @@ def backtrack_grid(grid, frozen_column=-1):
                     # if the queen can be moved down, do that and stop
                     grid[row_number][column_number] = 0
                     grid[row_number + 1][column_number] = 1
-                    return
+                    if helpers.is_safe_all_around(grid, row_number+1, column_number):
+                        return
                 else:
                     # if not, remove the queen and check the next column
                     grid[row_number][column_number] = 0
@@ -74,7 +75,7 @@ def place_next_queen(grid, frozen_column=-1):
             if grid[row_number][column_number] == 0:
                 # if no queen, place a queen
                 grid[row_number][column_number] = 1
-                valid_position = helpers.is_valid(grid)
+                valid_position = helpers.is_safe_all_around(grid, row_number, column_number)
 
                 if valid_position:
                     # if it fits in the grid then return true
@@ -118,10 +119,10 @@ def search_solutions(grid, frozen_column=-1):
 
 if __name__ == "__main__":
     frozen_column = -1
-    grid, frozen_column = helpers.load_grid("input.csv")
 
-    # uncomment here if you want to try a grid with no input
-    #grid = helpers.init_grid(10)
+    grid, frozen_column = helpers.load_grid("input.csv")
+    # comment out line above and uncomment below if you want to try a grid with no input
+    #grid = helpers.init_grid(16)
 
     helpers.print_grid(grid)
     search_solutions(grid, frozen_column)

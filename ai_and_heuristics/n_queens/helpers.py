@@ -112,6 +112,42 @@ def _is_safe(grid, row, col, N):
 
     return True
 
+
+def is_safe_all_around(grid, row, col):
+    '''
+    Helper to check if the queen at a given position is safe
+    Because of the constrain we have to check the right side too
+    Takes grid, row number, column number, total grid width returns True if safe, else False
+    '''
+    N = get_grid_width(grid)
+    # Check this row
+    for i in range(N):
+        if i != col:
+            if grid[row][i] == 1:
+                return False
+
+    # Check upper diagonal on left
+    for i, j in zip(range(row-1, -1, -1), range(col-1, -1, -1)):
+        if grid[i][j] == 1:
+            return False
+
+    # Check lower diagonal on left
+    for i, j in zip(range(row+1, N, 1), range(col-1, -1, -1)):
+        if grid[i][j] == 1:
+            return False
+
+    # Check upper diagonal on right
+    for i, j in zip(range(row-1, -1, -1), range(col+1, N)):
+        if grid[i][j] == 1:
+            return False
+
+    # Check lower diagonal on right
+    for i, j in zip(range(row+1, N, 1), range(col+1, N)):
+        if grid[i][j] == 1:
+            return False
+
+    return True
+
 # checking if the solution is valid
 
 

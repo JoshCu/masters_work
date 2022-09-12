@@ -11,6 +11,24 @@ def print_grid(grid : dict):
         for row_number in range(0,columns):
             print(grid[column_number][row_number], end ="|")
 
+def load_grid(filename):
+    with open(filename,'r', encoding = 'utf-8') as f:
+        line = f.readline().strip().split(',')
+        width = len(line)
+    # easier to just close and reopen the file than to undo the readline advance
+    frozen_column = -1
+    with open(filename,'r', encoding = 'utf-8') as f:
+        grid = {}
+        for column_number in range(0,width):
+            line = f.readline().strip().split(',')
+            grid[column_number] = {}
+            for row_number in range(0,width):
+                if (int(line[row_number]) == 1):
+                    frozen_column = row_number
+                grid[column_number][row_number] = int(line[row_number])
+        return grid, frozen_column
+
+
 def save_grid(grid : dict):
     rows = get_grid_width(grid)
     columns = rows
@@ -20,7 +38,6 @@ def save_grid(grid : dict):
             for row_number in range(0,columns):
                 row += f"{grid[column_number][row_number]},"
             row = row[:-1]
-            print(row)
             f.write(row)
             f.write('\n')
 
@@ -125,6 +142,43 @@ def __evaluate_diagonals(grid) -> bool:
 
 def evaluate_positions(grid) -> bool:
     return __evaluate_columns(grid) and __evaluate_rows(grid) and __evaluate_diagonals(grid)
+
+
+# My original checker was too expensive so I'm reusing Dr.Duans
+# I did ask her if this was ok beforehand 
+# check if a queen at [row][col] is attacked. We need to check only left for queen's safety.
+def isSafe(board, row, col, N):
+    # Check this row on left side
+    for i in range(col):
+        if board[row][i] == 1:
+            return False
+
+    # Check upper diagonal on left
+    for i, j in zip(range(row-1, -1, -1), range(col-1, -1, -1)):
+        if board[i][j] == 1:
+            return False
+
+    # Check lower diagonal on left
+    for i, j in zip(range(row+1, N, 1), range(col-1, -1, -1)):
+        if board[i][j] == 1:
+            return False
+
+    return True
+
+# checking if the solution is valid
+def isValid(grid):
+    N = get_grid_width(grid)
+    for row in range(N):
+        Qs = 0
+        for col in range(N):
+            if grid[row][col] == 1:
+                Qs += 1
+                if not isSafe(grid, row, col, N):
+                    return False
+        if Qs != 1:  # making sure there is a queen per row
+            return False
+
+    return True
 
 def get_first_empty_column(grid):
     rows = get_grid_width(grid)

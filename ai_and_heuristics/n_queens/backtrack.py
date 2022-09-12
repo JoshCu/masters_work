@@ -5,7 +5,9 @@ import time
 sys.setrecursionlimit(10**9)
 start_time = time.time()
 
-def backtrack_grid(grid, frozen_column = -1):
+
+def backtrack_grid(grid, frozen_column=-1):
+    print(frozen_column)
     '''
     Back tracks grid as far as needed up graph.
     As we are searching by looping through columns left to right and then through rows top to bottom,
@@ -26,70 +28,77 @@ def backtrack_grid(grid, frozen_column = -1):
     '''
     rows = helpers.get_grid_width(grid)
     columns = rows
-    #loop over columns right to left
-    for column_number in range(columns-1,-1, -1):
-        # if column_number == frozen_column:
-        #     continue
-        for row_number in range(0,rows):
+    # loop over columns right to left
+    for column_number in range(columns-1, -1, -1):
+        if column_number == frozen_column:
+            continue
+        for row_number in range(0, rows):
             if grid[row_number][column_number] == 1:
-                if row_number < rows -1:
+                if row_number < rows - 1:
                     grid[row_number][column_number] = 0
                     grid[row_number + 1][column_number] = 1
                     return
                 else:
                     grid[row_number][column_number] = 0
 
-    #TODO this is not a great way of exiting
-    #if we reach this point the grid can't be backtracked
+    # TODO this is not a great way of exiting
+    # if we reach this point the grid can't be backtracked
     print("Grid can't be backtracked, no solution found")
     sys.exit(1)
 
-def place_next_queen(grid, frozen_column = -1):
+
+def place_next_queen(grid, frozen_column=-1):
+    # helpers.print_grid(grid)
+    # print('\n')
     rows = helpers.get_grid_width(grid)
     columns = rows
     placed = False
     start = helpers.get_first_empty_column(grid)
-    for column_number in range(start,columns):
-        for row_number in range(0,rows):
+    for column_number in range(start, columns):
+        for row_number in range(0, rows):
 
             if grid[row_number][column_number] == 0:
+
                 grid[row_number][column_number] = 1
                 valid_position = helpers.isValid(grid)
                 if valid_position:
-                # if it fits in the grid then return true
+                    # if it fits in the grid then return true
                     return True
-                elif not valid_position and row_number == rows -1:
-                    backtrack_grid(grid)
-                    return place_next_queen(grid)
+                elif not valid_position and row_number == rows - 1:
+                    backtrack_grid(grid, frozen_column)
+                    return place_next_queen(grid, frozen_column)
                 else:
-                # if not valid and not on final row, backtrack last guess
-                # by setting value back to zero
+                    # if not valid and not on final row, backtrack last guess
+                    # by setting value back to zero
                     grid[row_number][column_number] = 0
-                    
+
+    # helpers.print_grid(grid)
+    # print('\n')
+
     return placed
 
 
-def search_solutions(grid, frozen_column = -1):
+def search_solutions(grid, frozen_column=-1):
     num_queens = helpers.count_queens(grid)
     grid_width = helpers.get_grid_width(grid)
-    if (num_queens == grid_width) and not (helpers.evaluate_positions(grid)):
+    if (num_queens == grid_width) and (helpers.isValid(grid)):
         print("Solution Found!")
         helpers.print_grid(grid)
         print('\n')
         helpers.save_grid(grid)
         print("--- %s seconds ---" % (time.time() - start_time))
         sys.exit(0)
-    elif(num_queens == grid_width) and (helpers.evaluate_positions(grid)):
+    elif (num_queens == grid_width) and not (helpers.isValid(grid)):
         print("no solution found")
         sys.exit(1)
 
-    queen_placed = place_next_queen(grid)
+    queen_placed = place_next_queen(grid, frozen_column)
 
     if num_queens < grid_width and not queen_placed:
         print("no solution found")
         sys.exit(1)
 
-    search_solutions(grid)
+    search_solutions(grid, frozen_column)
 
 
 if __name__ == "__main__":

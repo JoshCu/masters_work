@@ -110,17 +110,3 @@ def is_safe_all_around(grid, row, col):
             return False
 
     return True
-
-
-def get_first_empty_column(grid: list):
-    '''
-    Helper function that returns the first column without a queen from left to right
-    Takes grid, returns column index number e.g. first column == 0'''
-    rows = get_grid_width(grid)
-    columns = rows
-    for column_number in range(0, columns):
-        queens = 0
-        for row_number in range(0, rows):
-            queens += grid[row_number][column_number]
-        if queens == 0:
-            return column_number

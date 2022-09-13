@@ -9,11 +9,11 @@ __copyright__ = 'Copyright 2022, constrained n-queens'
 __email__ = 'Josh.Cu@gmail.com'
 
 
-def get_grid_width(grid: dict):
-    return len(grid.keys())
+def get_grid_width(grid: list):
+    return len(grid)
 
 
-def print_grid(grid: dict):
+def print_grid(grid: list):
     '''
     Helper function to print the grid out to console
     '''
@@ -36,11 +36,10 @@ def load_grid(filename):
         width = len(line)
     # easier to just close and reopen the file than to undo the readline advance
     frozen_column = -1
+    grid = init_grid(width)
     with open(filename, 'r', encoding='utf-8') as f:
-        grid = {}
         for column_number in range(0, width):
             line = f.readline().strip().split(',')
-            grid[column_number] = {}
             for row_number in range(0, width):
                 if (int(line[row_number]) == 1):
                     frozen_column = row_number
@@ -48,7 +47,7 @@ def load_grid(filename):
         return grid, frozen_column
 
 
-def save_grid(grid: dict):
+def save_grid(grid: list):
     '''
     Helper function to save grid dictionary to a file called solution.csv
     '''
@@ -68,49 +67,13 @@ def init_grid(width):
     '''
     Helper to initialise and empty nested dictionary grid structure
     '''
-    grid = {}
-    for column_number in range(0, width):
-        grid[column_number] = {}
-        for row_number in range(0, width):
-            grid[column_number][row_number] = 0
-    return grid
-
-
-def count_queens(grid: dict):
-    '''
-    Helper that returns the total number of queens in a grid'''
-    rows = get_grid_width(grid)
-    columns = rows
-    queens = 0
-    for column_number in range(0, columns):
-        for row_number in range(0, rows):
-            queens += grid[column_number][row_number]
-    return queens
-
+    list_of_lists = []
+    for i in range(width):
+        list_of_lists.append([0] * width)
+    return list_of_lists
 
 # My original checker was too expensive so I'm reusing Dr.Duans
 # I did ask her if this was ok beforehand
-# check if a queen at [row][col] is attacked. We need to check only left for queen's safety.
-def _is_safe(grid, row, col, N):
-    '''
-    private method used by is_valid to determing if queen at a given position is safe
-    takes grid, row number, column number, total grid width returns True if safe, else False'''
-    # Check this row on left side
-    for i in range(col):
-        if grid[row][i] == 1:
-            return False
-
-    # Check upper diagonal on left
-    for i, j in zip(range(row-1, -1, -1), range(col-1, -1, -1)):
-        if grid[i][j] == 1:
-            return False
-
-    # Check lower diagonal on left
-    for i, j in zip(range(row+1, N, 1), range(col-1, -1, -1)):
-        if grid[i][j] == 1:
-            return False
-
-    return True
 
 
 def is_safe_all_around(grid, row, col):
@@ -148,27 +111,8 @@ def is_safe_all_around(grid, row, col):
 
     return True
 
-# checking if the solution is valid
 
-
-def is_valid(grid):
-    '''
-    Helper function to check if all the queens placed on a grid are not able to attack eachother
-    Takes grid, returns True or False if the grid is valid or not
-    '''
-    N = get_grid_width(grid)
-    for row in range(N):
-        Qs = 0
-        for col in range(N):
-            if grid[row][col] == 1:
-                Qs += 1
-                if not _is_safe(grid, row, col, N):
-                    return False
-
-    return True
-
-
-def get_first_empty_column(grid: dict):
+def get_first_empty_column(grid: list):
     '''
     Helper function that returns the first column without a queen from left to right
     Takes grid, returns column index number e.g. first column == 0'''

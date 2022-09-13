@@ -38,13 +38,19 @@ def backtrack_grid(grid, current_column, frozen_column):
     # this tracks if we've removed a queen from the column yet
     queen_removed = False
     width = helpers.get_grid_width(grid)
+    # if it's not the last column from right to left
     if current_column > 0:
         for row in range(width):
+            # if a queen is found set it to 0
             if grid[row][current_column - 1] == 1:
                 grid[row][current_column - 1] = 0
+                # set this flag to true
                 queen_removed = True
+                # continue so we don't run the if below and put the queen in the place we just removed it
                 continue
+            # if we've removed a queen from this column then see if this place is safe
             if queen_removed and helpers.is_safe_all_around(grid, row, current_column - 1):
+                # if yes, place a queen if not, loop again to the next row
                 grid[row][current_column - 1] = 1
                 return True
 
@@ -82,9 +88,10 @@ def search_solutions(grid, current_column, frozen_column):
 if __name__ == "__main__":
     frozen_column = -2
     start_time = time.time()
-    #grid, frozen_column = helpers.load_grid("input.csv")
+    grid, frozen_column = helpers.load_grid("input.csv")
     # comment out line above and uncomment below if you want to try a grid with no input
-    grid = helpers.init_grid(15)
+    # although it doesn't work above 15 because of recursion limits (should have done this in c++)
+    #grid = helpers.init_grid(15)
 
     helpers.print_grid(grid)
 

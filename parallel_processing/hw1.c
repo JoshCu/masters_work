@@ -71,7 +71,7 @@ __global__ void MatrixMulKernelPerRow(float *A_d, float *B_d, float *C_d, int si
 // this is the same as the column one but with the rows and columns swapped
 __global__ void MatrixMulKernelPerColumn(float *A_d, float *B_d, float *C_d, int size)
 {
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
     if (j < size)
     {
         for (k = 0; k < size; k++)

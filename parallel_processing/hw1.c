@@ -1,5 +1,5 @@
 // 1A
-
+#DEFINE BLOCK_SIZE = 5;
 __host__ void vecAdd(float *A, float *B, float *C, int n)
 {
     int size = n * sizeof(float);
@@ -15,14 +15,16 @@ __host__ void vecAdd(float *A, float *B, float *C, int n)
     cudaMemcpy(B_d, B, size, cudaMemcpyHostToDevice);
 
     // Kernel launch code – to have the device
-    dim3 numBlocks(1);
-    dim3 threadPerBlocks(size, size, 1);
+    dim3 numBlocks(size/BLOCK_SIZE,size/BLOCK_SIZE);
+    dim3 numThreads(BLOCK_SIZE,BLOCK_SIZE);
+
 
     // Dimensions for Each row / column
-    dim3 alternativeBlocks(1);
-    dim3 alternativeThreads(N, 1, 1);
+    dim3 alternativeBlocks(size/BLOCK_SIZE);
+    fix
+   // dim3 alternativeThreads(, 1, 1);
 
-    MatrixMulKernelPerElement<<<numBlocks, threadPerBlocks>>>(A_d, B_d, C_d, n);
+    MatrixMulKernelPerElement<<<numBlocks, numThreads>>>(A_d, B_d, C_d, n);
     // to perform the actual vector addition
 
     // MatrixMulKernelPerRow<<<alternativeBlocks, alternativeThreads>>>(A_d, B_d, C_d, n);
@@ -41,7 +43,7 @@ __host__ void vecAdd(float *A, float *B, float *C, int n)
 __global__ void MatrixMulKernelPerElement(float *A_d, float *B_d, float *C_d, int size)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.x * blockDim.x + threadIdx.y;
+    int j = blockIdx.y * blockDim.y + threadIdx.y;
     if (i < size && j < size)
     {
         for (k = 0; k < size; k++)
@@ -85,7 +87,10 @@ __global__ void MatrixMulKernelPerColumn(float *A_d, float *B_d, float *C_d, int
 
 // PROBLEM B
 /*
-    1. The block size should be set to 1-5 because there are 32 threads in a warp and 2^5 is 32 so it will be the most efficient at 5.
+    1. The block size should be set to 1-5 because there are 32 threads in a warp and 5*5 = 25  6*6 = 36.
+        therefore the smallest square grid you can have is a 5x5  dimBlock(BLOCK_SIZE,BLOCK_SIZE)
+
+    note: warp is a group of threads with consecutive indexes that execute together
 
     2. Add a synchtreads() between the write and read to clock A to ensure that all the writes have happened before the read does
        // how would this even work withouth the syncthreads()?

@@ -21,8 +21,7 @@ __host__ void vecAdd(float *A, float *B, float *C, int n)
 
     // Dimensions for Each row / column
     dim3 alternativeBlocks(size/BLOCK_SIZE);
-    fix
-   // dim3 alternativeThreads(, 1, 1);
+    dim3 alternativeThreads(BLOCK_SIZE);
 
     MatrixMulKernelPerElement<<<numBlocks, numThreads>>>(A_d, B_d, C_d, n);
     // to perform the actual vector addition

@@ -1,6 +1,6 @@
 // 1A
 #DEFINE BLOCK_SIZE = 5;
-__host__ void vecAdd(float *A, float *B, float *C, int n)
+__host__ void matrixMultiply(float *A, float *B, float *C, int n)
 {
     int size = n * sizeof(float);
     float *A_d, *B_d, *C_d;
@@ -24,7 +24,7 @@ __host__ void vecAdd(float *A, float *B, float *C, int n)
     dim3 alternativeThreads(BLOCK_SIZE);
 
     MatrixMulKernelPerElement<<<numBlocks, numThreads>>>(A_d, B_d, C_d, n);
-    // to perform the actual vector addition
+    // to perform the actual matrix multiplication
 
     // MatrixMulKernelPerRow<<<alternativeBlocks, alternativeThreads>>>(A_d, B_d, C_d, n);
 

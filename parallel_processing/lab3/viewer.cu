@@ -33,13 +33,105 @@
 #include "cpu_bitmap.h"
 #include "bitmap_help.h"
 
-__host__ void imgProc(unsigned char *map, int size, int width, int height) {
-   return;
+#define CHANNELS 4 // we have 3 channels corresponding to RGB
+// The input image is encoded as unsigned characters [0, 255]
+__global__ void colorConvert(unsigned char *grayImage,
+                             unsigned char *rgbImage,
+                             int width, int height)
+{
+   int x = blockIdx.x;
+   int y = blockIdx.y;
+   if (x < gridDim.x && y < gridDim.y)
+   {
+      // get 1D coordinate for the grayscale image
+      int grayOffset = (y * gridDim.x) + x;
+      // one can think of the RGB image having
+      // CHANNEL times columns than the gray scale image
+      int rgbOffset = grayOffset * CHANNELS;
+      unsigned char r = rgbImage[rgbOffset];     // red value for pixel
+      unsigned char g = rgbImage[rgbOffset + 1]; // green value for pixel
+      unsigned char b = rgbImage[rgbOffset + 2]; // blue value for pixel
+      // perform the rescaling and store it
+      // We multiply by floating point constants
+      grayImage[rgbOffset] = 0.21f * r + 0.71f * g + 0.07f * b;
+      grayImage[rgbOffset + 1] = 0.21f * r + 0.71f * g + 0.07f * b;
+      grayImage[rgbOffset + 2] = 0.21f * r + 0.71f * g + 0.07f * b;
+   }
 }
 
-int main(void) {
+#define BLUR_SIZE 1
+__global__ void blurKernel(unsigned char *in, unsigned char *out, int width, int height)
+{
+   int x = blockIdx.x * blockDim.x + threadIdx.x;
+   int y = blockIdx.y * blockDim.y + threadIdx.y;
+   if (x < width && y < height)
+   {
+      int pixValR = 0;
+      int pixValG = 0;
+      int pixValB = 0;
+      int pixels = 0;
+      // Get the average of the surrounding 2xBLUR_SIZE x 2xBLUR_SIZE box
+      for (int blurRow = -BLUR_SIZE; blurRow < BLUR_SIZE + 1; ++blurRow)
+      {
+         for (int blurCol = -BLUR_SIZE; blurCol < BLUR_SIZE + 1; ++blurCol)
+         {
+            int curRow = y + blurRow;
+            int curCol = x + blurCol;
+            // Verify we have a valid image pixel
+            if (curRow > -1 && curRow < height && curCol > -1 && curCol < width)
+            {
+               // get 1D coordinate for the grayscale image
+               int grayOffset = (curRow * gridDim.x) + curCol;
+               // one can think of the RGB image having
+               // CHANNEL times columns than the gray scale image
+               int rgbOffset = grayOffset * CHANNELS;
+               pixValR += in[rgbOffset];     // red value for pixel
+               pixValG += in[rgbOffset + 1]; // green value for pixel
+               pixValB += in[rgbOffset + 2]; // blue value for pixel
+               // pixVal += in[curRow * width + curCol];
+               pixels++; // Keep track of number of pixels in the accumulated total
+            }
+         }
+      }
+      int grayOffset = (y * gridDim.x) + x;
+      // one can think of the RGB image having
+      // CHANNEL times columns than the gray scale image
+      int rgbOffset = grayOffset * CHANNELS;
+      // Write our new pixel value out
+      // out[y * width + x] = (unsigned char)(pixVal / pixels);
+      out[rgbOffset] = pixValR / pixels; // red value for pixel
+      out[rgbOffset + 1] = pixValG / pixels;
+      out[rgbOffset + 2] = pixValB / pixels;
+   }
+}
+
+__host__ void imgProc(unsigned char *map, int size, int width, int height)
+{
+   //    Allocate device memory.
+   unsigned char *d_rgbImage, *d_grayImage;
+   cudaMalloc((void **)&d_rgbImage, size * sizeof(unsigned char));
+   cudaMalloc((void **)&d_grayImage, size * sizeof(unsigned char));
+   // • Copy host memory (the bitmap pixel data) to device.
+   cudaMemcpy(d_rgbImage, map, size * sizeof(unsigned char), cudaMemcpyHostToDevice);
+   // • Create a width-by-height grid of 1-by-1 blocks. Each block corresponds to an individual pixel, whose
+   // coordinates are given as blockIdx.x + blockIdx.y * gridDim.x.
+   dim3 dimGrid(width, height);
+   dim3 dimBlock(1, 1);
+
+   // • Invoke a CUDA kernel which you will write. Insert this kernel code prior to imgProc().
+   // colorConvert<<<dimGrid, dimBlock>>>(d_grayImage, d_rgbImage, width, height);
+   blurKernel<<<dimGrid, dimBlock>>>(d_rgbImage, d_grayImage, width, height);
+   // • Copy results from device to host.
+   cudaMemcpy(map, d_grayImage, size * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+   // • Deallocate device memory.
+   cudaFree(d_rgbImage);
+   cudaFree(d_grayImage);
+}
+
+int main(void)
+{
    char fname[50];
-   FILE* infile;
+   FILE *infile;
    unsigned short ftype;
    tagBMFH bitHead;
    tagBMIH bitInfoHead;
@@ -47,10 +139,11 @@ int main(void) {
 
    printf("Please enter the .bmp file name: ");
    scanf("%s", fname);
-   strcat(fname,".bmp");
+   strcat(fname, ".bmp");
    infile = fopen(fname, "rb");
 
-   if (infile != NULL) {
+   if (infile != NULL)
+   {
       printf("File open successful.\n");
       fread(&ftype, 1, sizeof(unsigned short), infile);
       if (ftype != 0x4d42)
@@ -59,14 +152,16 @@ int main(void) {
          return 1;
       }
       fread(&bitHead, 1, sizeof(tagBMFH), infile);
-      fread(&bitInfoHead, 1, sizeof(tagBMIH), infile);      
+      fread(&bitInfoHead, 1, sizeof(tagBMIH), infile);
    }
-   else {
+   else
+   {
       printf("File open fail.\n");
       return 1;
    }
 
-   if (bitInfoHead.biBitCount < 24) {
+   if (bitInfoHead.biBitCount < 24)
+   {
       long nPlateNum = long(pow(2, double(bitInfoHead.biBitCount)));
       pRgb = (tagRGBQ *)malloc(nPlateNum * sizeof(tagRGBQ));
       memset(pRgb, 0, nPlateNum * sizeof(tagRGBQ));
@@ -82,19 +177,23 @@ int main(void) {
    fread(pColorData, 1, nData, infile);
 
    fclose(infile);
-   
+
    CPUBitmap dataOfBmp(width, height);
    unsigned char *map = dataOfBmp.get_ptr();
 
-   if (bitInfoHead.biBitCount < 24) {
+   if (bitInfoHead.biBitCount < 24)
+   {
       int k, index = 0;
-      if (bitInfoHead.biBitCount == 1) {
+      if (bitInfoHead.biBitCount == 1)
+      {
          for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
+            for (int j = 0; j < width; j++)
+            {
                unsigned char mixIndex = 0;
                k = i * l_width + j / 8;
                mixIndex = pColorData[k];
-               if (j % 8 < 7) mixIndex = mixIndex << (7 - (j % 8));
+               if (j % 8 < 7)
+                  mixIndex = mixIndex << (7 - (j % 8));
                mixIndex = mixIndex >> 7;
                map[index * 4 + 0] = pRgb[mixIndex].rgbRed;
                map[index * 4 + 1] = pRgb[mixIndex].rgbGreen;
@@ -102,14 +201,17 @@ int main(void) {
                map[index * 4 + 3] = pRgb[mixIndex].rgbReserved;
                index++;
             }
-       }
-       else if (bitInfoHead.biBitCount == 2) {
+      }
+      else if (bitInfoHead.biBitCount == 2)
+      {
          for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
+            for (int j = 0; j < width; j++)
+            {
                unsigned char mixIndex = 0;
                k = i * l_width + j / 4;
                mixIndex = pColorData[k];
-               if (j % 4 < 3) mixIndex = mixIndex << (6 - 2 * (j % 4));
+               if (j % 4 < 3)
+                  mixIndex = mixIndex << (6 - 2 * (j % 4));
                mixIndex = mixIndex >> 6;
                map[index * 4 + 0] = pRgb[mixIndex].rgbRed;
                map[index * 4 + 1] = pRgb[mixIndex].rgbGreen;
@@ -117,14 +219,17 @@ int main(void) {
                map[index * 4 + 3] = pRgb[mixIndex].rgbReserved;
                index++;
             }
-       }
-       else if (bitInfoHead.biBitCount == 4) {
+      }
+      else if (bitInfoHead.biBitCount == 4)
+      {
          for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
+            for (int j = 0; j < width; j++)
+            {
                unsigned char mixIndex = 0;
                k = i * l_width + j / 2;
                mixIndex = pColorData[k];
-               if (j % 2 == 0) mixIndex = mixIndex << 4;
+               if (j % 2 == 0)
+                  mixIndex = mixIndex << 4;
                mixIndex = mixIndex >> 4;
                map[index * 4 + 0] = pRgb[mixIndex].rgbRed;
                map[index * 4 + 1] = pRgb[mixIndex].rgbGreen;
@@ -132,10 +237,12 @@ int main(void) {
                map[index * 4 + 3] = pRgb[mixIndex].rgbReserved;
                index++;
             }
-       }
-       else if (bitInfoHead.biBitCount == 8) {
+      }
+      else if (bitInfoHead.biBitCount == 8)
+      {
          for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
+            for (int j = 0; j < width; j++)
+            {
                unsigned char mixIndex = 0;
                k = i * l_width + j;
                mixIndex = pColorData[k];
@@ -145,10 +252,12 @@ int main(void) {
                map[index * 4 + 3] = pRgb[mixIndex].rgbReserved;
                index++;
             }
-       }
-       else if (bitInfoHead.biBitCount == 16) {
+      }
+      else if (bitInfoHead.biBitCount == 16)
+      {
          for (int i = 0; i < height; i++)
-            for (int j = 0; j < width; j++) {
+            for (int j = 0; j < width; j++)
+            {
                unsigned char mixIndex = 0;
                k = i * l_width + j * 2;
                unsigned char shortTemp = pColorData[k + 1] << 8;
@@ -159,12 +268,14 @@ int main(void) {
                map[index * 4 + 3] = pRgb[mixIndex].rgbReserved;
                index++;
             }
-       }
+      }
    }
-   else {
+   else
+   {
       int k, index = 0;
       for (int i = 0; i < height; i++)
-         for (int j = 0; j < width; j++) {
+         for (int j = 0; j < width; j++)
+         {
             k = i * l_width + j * 3;
             map[index * 4 + 0] = pColorData[k + 2];
             map[index * 4 + 1] = pColorData[k + 1];

@@ -50,49 +50,10 @@ __global__ void colorConvert(unsigned char *grayImage, unsigned char *rgbImage)
       unsigned char b = rgbImage[rgbOffset + 2]; // blue value for pixel
 
       // convert to grayscale using the formula given
-      grayImage[rgbOffset] = 0.21f * r + 0.71f * g + 0.07f * b;
-      grayImage[rgbOffset + 1] = 0.21f * r + 0.71f * g + 0.07f * b;
-      grayImage[rgbOffset + 2] = 0.21f * r + 0.71f * g + 0.07f * b;
-   }
-}
-
-#define BLUR_SIZE 1
-__global__ void blurKernel(unsigned char *in, unsigned char *out)
-{
-   int x = blockIdx.x * blockDim.x + threadIdx.x;
-   int y = blockIdx.y * blockDim.y + threadIdx.y;
-   if (x < gridDim.x && y < gridDim.x)
-   {
-      int pixValR = 0;
-      int pixValG = 0;
-      int pixValB = 0;
-      int pixels = 0;
-      // Get the average of the surrounding 2xBLUR_SIZE x 2xBLUR_SIZE box
-      for (int blurRow = -BLUR_SIZE; blurRow < BLUR_SIZE + 1; ++blurRow)
-      {
-         for (int blurCol = -BLUR_SIZE; blurCol < BLUR_SIZE + 1; ++blurCol)
-         {
-            int curRow = y + blurRow;
-            int curCol = x + blurCol;
-            // Verify we have a valid image pixel
-            if (curRow > -1 && curRow < gridDim.y && curCol > -1 && curCol < gridDim.x)
-            {
-               // get 1D coordinate for the grayscale image
-               int grayOffset = (curRow * gridDim.x) + curCol;
-               // get 1D coordinate for the color image
-               int rgbOffset = grayOffset * CHANNELS;
-               pixValR += in[rgbOffset];     // red value for pixel
-               pixValG += in[rgbOffset + 1]; // green value for pixel
-               pixValB += in[rgbOffset + 2]; // blue value for pixel
-               pixels++;                     // Keep track of number of pixels in the accumulated total
-            }
-         }
-      }
-      int grayOffset = (y * gridDim.x) + x;
-      int rgbOffset = grayOffset * CHANNELS;
-      out[rgbOffset] = pixValR / pixels;     // red value for pixel
-      out[rgbOffset + 1] = pixValG / pixels; // green value for pixel
-      out[rgbOffset + 2] = pixValB / pixels; // blue value for pixel
+      float intensity = 0.21f * r + 0.71f * g + 0.07f * b;
+      grayImage[rgbOffset + 0] = intensity;
+      grayImage[rgbOffset + 1] = intensity;
+      grayImage[rgbOffset + 2] = intensity;
    }
 }
 
@@ -112,8 +73,7 @@ __host__ void imgProc(unsigned char *map, int size, int width, int height)
    dim3 dimBlock(1, 1);
 
    // Invoke a CUDA kernel
-   // colorConvert<<<dimGrid, dimBlock>>>(d_grayImage, d_rgbImage);
-   blurKernel<<<dimGrid, dimBlock>>>(d_rgbImage, d_grayImage);
+   colorConvert<<<dimGrid, dimBlock>>>(d_grayImage, d_rgbImage);
 
    // Copy results from device to host.
    cudaMemcpy(map, d_grayImage, size * sizeof(unsigned char), cudaMemcpyDeviceToHost);

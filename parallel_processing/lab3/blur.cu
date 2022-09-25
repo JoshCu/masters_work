@@ -34,33 +34,11 @@
 #include "bitmap_help.h"
 
 #define CHANNELS 4 // we have 4 channels corresponding to ARGB
-// The input image is encoded as unsigned characters [0, 255]
-__global__ void colorConvert(unsigned char *grayImage, unsigned char *rgbImage)
-{
-   int x = blockIdx.x;
-   int y = blockIdx.y;
-   if (x < gridDim.x && y < gridDim.y)
-   {
-      // get 1D coordinate for the grayscale image
-      int grayOffset = (y * gridDim.x) + x;
-      // get 1D coordinate for the color image
-      int rgbOffset = grayOffset * CHANNELS;
-      unsigned char r = rgbImage[rgbOffset];     // red value for pixel
-      unsigned char g = rgbImage[rgbOffset + 1]; // green value for pixel
-      unsigned char b = rgbImage[rgbOffset + 2]; // blue value for pixel
-
-      // convert to grayscale using the formula given
-      grayImage[rgbOffset] = 0.21f * r + 0.71f * g + 0.07f * b;
-      grayImage[rgbOffset + 1] = 0.21f * r + 0.71f * g + 0.07f * b;
-      grayImage[rgbOffset + 2] = 0.21f * r + 0.71f * g + 0.07f * b;
-   }
-}
-
 #define BLUR_SIZE 1
 __global__ void blurKernel(unsigned char *in, unsigned char *out)
 {
-   int x = blockIdx.x * blockDim.x + threadIdx.x;
-   int y = blockIdx.y * blockDim.y + threadIdx.y;
+   int x = blockIdx.x;
+   int y = blockIdx.y;
    if (x < gridDim.x && y < gridDim.x)
    {
       int pixValR = 0;
@@ -99,12 +77,12 @@ __global__ void blurKernel(unsigned char *in, unsigned char *out)
 __host__ void imgProc(unsigned char *map, int size, int width, int height)
 {
    // Allocate device memory.
-   unsigned char *d_rgbImage, *d_grayImage;
-   cudaMalloc((void **)&d_rgbImage, size * sizeof(unsigned char));
-   cudaMalloc((void **)&d_grayImage, size * sizeof(unsigned char));
+   unsigned char *d_sourceImage, *d_blurImage;
+   cudaMalloc((void **)&d_sourceImage, size * sizeof(unsigned char));
+   cudaMalloc((void **)&d_blurImage, size * sizeof(unsigned char));
 
    // Copy host memory (the bitmap pixel data) to device.
-   cudaMemcpy(d_rgbImage, map, size * sizeof(unsigned char), cudaMemcpyHostToDevice);
+   cudaMemcpy(d_sourceImage, map, size * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
    // Create a width-by-height grid of 1-by-1 blocks. Each block corresponds to an individual pixel, whose
    // coordinates are given as blockIdx.x + blockIdx.y * gridDim.x.
@@ -112,15 +90,14 @@ __host__ void imgProc(unsigned char *map, int size, int width, int height)
    dim3 dimBlock(1, 1);
 
    // Invoke a CUDA kernel
-   // colorConvert<<<dimGrid, dimBlock>>>(d_grayImage, d_rgbImage);
-   blurKernel<<<dimGrid, dimBlock>>>(d_rgbImage, d_grayImage);
+   blurKernel<<<dimGrid, dimBlock>>>(d_sourceImage, d_blurImage);
 
    // Copy results from device to host.
-   cudaMemcpy(map, d_grayImage, size * sizeof(unsigned char), cudaMemcpyDeviceToHost);
+   cudaMemcpy(map, d_blurImage, size * sizeof(unsigned char), cudaMemcpyDeviceToHost);
 
    // Deallocate device memory.
-   cudaFree(d_rgbImage);
-   cudaFree(d_grayImage);
+   cudaFree(d_sourceImage);
+   cudaFree(d_blurImage);
 }
 
 int main(void)

@@ -11,7 +11,7 @@ if __name__ == "__main__":
     m = MDP(success_chance=success_rate, penalty=penalty)
 
     utility = m.value_iteration_max(m.current_utility)
-    p = m.getOptimalPolicy(utility)
+    p = m.get_optimal_policy(utility)
     helpers.print_grid(utility)
     helpers.print_grid(p, True)
     helpers.assignment_out(p)

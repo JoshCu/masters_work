@@ -1,4 +1,5 @@
 import helpers
+import copy
 
 
 class MDP:
@@ -12,8 +13,8 @@ class MDP:
         self.actions = [(-1, 0), (0, 1), (1, 0), (0, -1)]  # Up, Right, Down, Left
         self.num_rows = 3
         self.num_columns = 4
-        self.start_utility = [[0, 0, 0, 1], [0, 0, 0, -1], [0, 0, 0, 0], [0, 0, 0, 0]]
-        self.current_utility = [[0, 0, 0, 1], [0, 0, 0, -1], [0, 0, 0, 0], [0, 0, 0, 0]]
+        self.start_utility = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        self.current_utility = [[0, 0, 0, 1], [0, 0, 0, -1], [0, 0, 0, 0]]
         self.policy = helpers.load_policy(filename)
 
     def move_agent(self, utility, row, column, action):
@@ -27,7 +28,11 @@ class MDP:
                 new_row == new_col == 1):  # collide with the boundary or the wall
             return self.penalty + self.discount * utility[row][column]
         elif new_row <= 1 and new_col == 3:
-            return utility[new_row][new_col]
+            if new_row == 0:
+                return 1
+            else:
+                return -1
+            # return utility[new_row][new_col]
         else:
             return self.penalty + self.discount * utility[new_row][new_col]
 
@@ -41,18 +46,21 @@ class MDP:
         return u
 
     def value_iteration(self, utility):
-        for i in range(19):
-            next_utility_grid = self.start_utility
+        for i in range(20):
+            next_utility_grid = copy.deepcopy(self.start_utility)
+            print(next_utility_grid)
             for r in range(self.num_rows):
                 for c in range(self.num_columns):
                     if (r <= 1 and c == 3) or (r == c == 1):
                         continue
                     next_utility_grid[r][c] = self.calculate_utility(utility, r, c, self.policy[r][c])
-            utility = next_utility_grid
+            utility = copy.deepcopy(next_utility_grid)
+            print(utility)
+            helpers.print_grid(utility)
         return utility
 
     def value_iteration_max(self, utility):
-        for i in range(19):
+        for i in range(20):
             next_utility_grid = self.start_utility
             for row in range(self.num_rows):
                 for column in range(self.num_columns):
@@ -64,7 +72,7 @@ class MDP:
             helpers.print_grid(utility)
         return utility
 
-    def getOptimalPolicy(self, utility):
+    def get_optimal_policy(self, utility):
         '''Get the optimal policy from utility grid'''
         policy = [[-1, -1, -1, -1] for i in range(self.num_rows)]
         for row in range(self.num_rows):
@@ -72,10 +80,10 @@ class MDP:
                 if (row <= 1 and column == 3) or (row == column == 1):
                     continue
                 # Choose the action that maximizes the utility
-                maxAction, highest_utility = None, -float("inf")
+                best_action, highest_utility = None, -float("inf")
                 for action in range(self.num_actions):
                     calculated_utility = self.calculate_utility(utility, row, column, action)
                     if calculated_utility > highest_utility:
-                        maxAction, highest_utility = action, calculated_utility
-                policy[row][column] = maxAction
+                        best_action, highest_utility = action, calculated_utility
+                policy[row][column] = best_action
         return policy

@@ -13,3 +13,5 @@ if __name__ == "__main__":
     utility = m.value_iteration(m.current_utility)
     helpers.print_grid(utility)
     helpers.print_grid(m.policy, True)
+    print("UTILITY")
+    print(utility[2][0])

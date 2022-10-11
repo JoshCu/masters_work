@@ -52,9 +52,9 @@ def print_grid(arr, policy=False):
         res += "|"
         for column in range(4):
             if row == 1 and column == 3:
-                val = "+1"
-            elif row == 0 and column == 3:
                 val = "-1"
+            elif row == 0 and column == 3:
+                val = "+1"
             else:
                 if policy:
                     val = ["Up", "Right", "Down", "Left"][arr[row][column]]

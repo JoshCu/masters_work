@@ -20,21 +20,24 @@ class MDP:
         '''
         Perform an action at a state and get the new utility of that action at that state
         '''
+
         move_row, move_col = self.actions[action]
         new_row, new_col = row+move_row, column+move_col
         if new_row < 0 or new_col < 0 or new_row >= self.num_rows or new_col >= self.num_columns or (
                 new_row == new_col == 1):  # collide with the boundary or the wall
-            return utility[row][column]
-        else:
+            return self.penalty + self.discount * utility[row][column]
+        elif new_row <= 1 and new_col == 3:
             return utility[new_row][new_col]
+        else:
+            return self.penalty + self.discount * utility[new_row][new_col]
 
     def calculate_utility(self, utility, row, column, action):
         '''Calculate the utility of a state given an action and chance of failure'''
         slip_chance = (1-self.success_chance)/2
-        u = self.penalty
-        u += slip_chance * self.discount * self.move_agent(utility, row, column, (action-1) % 4)
-        u += self.success_chance * self.discount * self.move_agent(utility, row, column, action)
-        u += slip_chance * self.discount * self.move_agent(utility, row, column, (action+1) % 4)
+        u = 0
+        u += slip_chance * self.move_agent(utility, row, column, (action-1) % 4)
+        u += self.success_chance * self.move_agent(utility, row, column, action)
+        u += slip_chance * self.move_agent(utility, row, column, (action+1) % 4)
         return u
 
     def value_iteration(self, utility):
@@ -58,6 +61,7 @@ class MDP:
                     next_utility_grid[row][column] = max([self.calculate_utility(utility, row, column, action)
                                                           for action in range(self.num_actions)])
             utility = next_utility_grid
+            helpers.print_grid(utility)
         return utility
 
     def getOptimalPolicy(self, utility):

@@ -1,3 +1,13 @@
+"""
+This file contains some helpers to load the policy and display the utility grid
+   as well as dealing with the translation of notation for policy action direction
+"""
+
+__author__ = 'Josh Cunningham'
+__copyright__ = 'Copyright 2022, MDP'
+__email__ = 'Josh.Cu@gmail.com'
+
+
 def int_to_action(n):
     '''
     convert wacky number into up, right, down, left

@@ -1,3 +1,12 @@
+"""
+This file contains the main functions used to navigate, calculate utility
+   and calculate policy in a 2D MDP grid navigation problem.
+"""
+
+__author__ = 'Josh Cunningham'
+__copyright__ = 'Copyright 2022, MDP'
+__email__ = 'Josh.Cu@gmail.com'
+
 import helpers
 import copy
 
@@ -45,29 +54,19 @@ class MDP:
         u += slip_chance * self.move_agent(utility, row, column, (action+1) % 4)
         return u
 
-    def value_iteration(self, utility):
-        for i in range(20):
-            next_utility_grid = copy.deepcopy(self.start_utility)
-            print(next_utility_grid)
-            for r in range(self.num_rows):
-                for c in range(self.num_columns):
-                    if (r <= 1 and c == 3) or (r == c == 1):
-                        continue
-                    next_utility_grid[r][c] = self.calculate_utility(utility, r, c, self.policy[r][c])
-            utility = copy.deepcopy(next_utility_grid)
-            print(utility)
-            helpers.print_grid(utility)
-        return utility
-
-    def value_iteration_max(self, utility):
+    def value_iteration(self, utility, optimal=False):
         for i in range(20):
             next_utility_grid = self.start_utility
             for row in range(self.num_rows):
                 for column in range(self.num_columns):
                     if (row <= 1 and column == 3) or (row == column == 1):
                         continue
-                    next_utility_grid[row][column] = max([self.calculate_utility(utility, row, column, action)
-                                                          for action in range(self.num_actions)])
+                    if optimal:
+                        next_utility_grid[row][column] = max([self.calculate_utility(utility, row, column, action)
+                                                              for action in range(self.num_actions)])
+                    else:
+                        next_utility_grid[row][column] = self.calculate_utility(
+                            utility, row, column, self.policy[row][column])
             utility = next_utility_grid
             helpers.print_grid(utility)
         return utility

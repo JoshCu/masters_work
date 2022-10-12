@@ -10,7 +10,7 @@ if __name__ == "__main__":
     filename = sys.argv[2]
     m = MDP(filename=filename, penalty=penalty)
 
-    utility = m.value_iteration(([0, 0, 0, 1], [0, 0, 0, -1], [0, 0, 0, 0], [0, 0, 0, 0]))
+    utility = m.value_iteration(m.current_utility)
     helpers.print_grid(utility)
     helpers.print_grid(m.policy, True)
     print("UTILITY")

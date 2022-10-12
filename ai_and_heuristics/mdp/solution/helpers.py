@@ -7,6 +7,8 @@ __author__ = 'Josh Cunningham'
 __copyright__ = 'Copyright 2022, MDP'
 __email__ = 'Josh.Cu@gmail.com'
 
+import csv
+
 
 def int_to_action(n):
     '''
@@ -86,3 +88,12 @@ def assignment_out(array):
         output.append(r)
     print(output)
     return output
+
+
+def write_policy(value, file="expectimax.csv"):
+    '''
+    Helper function to save the output to csv
+    '''
+    with open(file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(value)

@@ -23,4 +23,4 @@ if __name__ == "__main__":
     p = m.get_optimal_policy(utility)
     helpers.print_grid(utility)
     helpers.print_grid(p, True)
-    helpers.assignment_out(p)
+    helpers.write_policy(helpers.assignment_out(p))

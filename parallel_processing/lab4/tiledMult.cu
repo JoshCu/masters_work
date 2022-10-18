@@ -36,8 +36,25 @@ __global__ void matrixMultiply(float *A, float *B, float *C, int numARows,
                                int numBColumns, int numCRows,
                                int numCColumns) {
   //@@ Insert code to implement matrix multiplication here
+  int x = blockIdx.x * TILE_WIDTH + threadIdx.x;
+  int y = blockIdx.y * TILE_WIDTH + threadIdx.y;
+  float sum = 0;
+  __shared__ float As[TILE_WIDTH][TILE_WIDTH];
+  __shared__ float Bs[TILE_WIDTH][TILE_WIDTH];
 
+  for (int i = 0; i < numAColumns; i += TILE_WIDTH) {
+    As[threadIdx.y][threadIdx.x] = A[y * numAColumns + i + threadIdx.x];
+    Bs[threadIdx.y][threadIdx.x] = B[(i + threadIdx.y) * numBColumns + x];
+    __syncthreads();
+    for (int j = 0; j < TILE_WIDTH; ++j) {
+      sum += As[threadIdx.y][j] * Bs[j][threadIdx.x];
+    }
+    __syncthreads();
+  }
+  C[y * numCColumns + x] = sum;
 }
+
+
 
 int main(int argc, char **argv) {
   float *hostA; // The A matrix
@@ -82,8 +99,11 @@ int main(int argc, char **argv) {
   fclose(infile2);
 
   //@@ Set numCRows and numCColumns
+  numCRows = numARows;
+  numCColumns = numBColumns;
 
   //@@ Allocate the hostC matrix
+  hostC = (float *)malloc(sizeof(float) * numCRows * numCColumns);
 
   stw.stop();
   printf("Importing data and creating memory on host: %f ms\n", stw.getTime());
@@ -96,6 +116,9 @@ int main(int argc, char **argv) {
   stw.start();
 
   //@@ Allocate GPU memory here
+  cudaMalloc((void **)&deviceA, sizeof(float) * numARows * numAColumns);
+  cudaMalloc((void **)&deviceB, sizeof(float) * numBRows * numBColumns);
+  cudaMalloc((void **)&deviceC, sizeof(float) * numCRows * numCColumns);
 
   stw.stop();
   printf("Allocating GPU memory: %f ms\n", stw.getTime());
@@ -104,11 +127,16 @@ int main(int argc, char **argv) {
   stw.start();
 
   //@@ Copy memory to the GPU here
+  cudaMemcpy(deviceA, hostA, sizeof(float) * numARows * numAColumns, cudaMemcpyHostToDevice);
+  cudaMemcpy(deviceB, hostB, sizeof(float) * numBRows * numBColumns, cudaMemcpyHostToDevice);
+  cudaMemset(deviceC, 0, sizeof(float) * numCRows * numCColumns);
 
   stw.stop();
   printf("Copying input memory to the GPU: %f ms\n", stw.getTime());
 
   //@@ Initialize the grid and block dimensions here
+  dim3 dimGrid(ceil(numCColumns / (float)TILE_WIDTH), ceil(numCRows / (float)TILE_WIDTH), 1);
+  dim3 dimBlock(TILE_WIDTH, TILE_WIDTH, 1);
     
   if (blog) printf("*** The block dimensions are %i x %i\n", dimBlock.x, dimBlock.y);
   if (blog) printf("*** The grid dimensions are %i x %i\n", dimGrid.x, dimGrid.y);
@@ -117,6 +145,7 @@ int main(int argc, char **argv) {
   stw.start();
 
   //@@ Launch the GPU Kernel here
+  matrixMultiply<<<dimGrid, dimBlock>>>(deviceA, deviceB, deviceC, numARows, numAColumns, numBRows, numBColumns, numCRows, numCColumns);
 
   cudaDeviceSynchronize();
   stw.stop();
@@ -126,6 +155,7 @@ int main(int argc, char **argv) {
   stw.start();
 
   //@@ Copy the GPU memory back to the CPU here
+  cudaMemcpy(hostC, deviceC, sizeof(float) * numCRows * numCColumns, cudaMemcpyDeviceToHost);
 
   stw.stop();
   printf("Copying output memory to the CPU: %f ms\n", stw.getTime());
@@ -134,6 +164,9 @@ int main(int argc, char **argv) {
   stw.start();
 
   //@@ Free the GPU memory here
+  cudaFree(deviceA);
+  cudaFree(deviceB);
+  cudaFree(deviceC);
 
   stw.stop();
   printf("Freeing GPU Memory: %f ms\n", stw.getTime());

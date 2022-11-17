@@ -37,10 +37,10 @@
 __device__ void reduction(int *input, int n)
 {
   // XY[2*BLOCK_SIZE] is in shared memory
-  for (unsigned int stride = 1; stride <= BLOCK_SIZE; stride *= 2)
+  for (unsigned int stride = 1; stride <= BLOCK_SIZE; stride <<= 1)
   {
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
-    if (index < 2 * BLOCK_SIZE)
+    int index = (threadIdx.x + 1) * (stride << 1) - 1;
+    if (index < (BLOCK_SIZE << 1))
       input[index] += input[index - stride];
     __syncthreads();
   }
@@ -48,18 +48,18 @@ __device__ void reduction(int *input, int n)
 
 __device__ void post_reduction(int *input, int n)
 {
-  for (unsigned int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2)
+  for (unsigned int stride = BLOCK_SIZE / 2; stride > 0; stride >>= 1)
   {
     __syncthreads();
-    int index = (threadIdx.x + 1) * stride * 2 - 1;
-    if (index + stride < 2 * BLOCK_SIZE)
+    int index = (threadIdx.x + 1) * (stride << 1) - 1;
+    if (index + stride < (BLOCK_SIZE << 1))
     {
       input[index + stride] += input[index];
     }
   }
 }
 
-__global__ void scan(int *input, int *output, int *aux, int len)
+__global__ void scan(int *input, int *output, int len)
 {
   //@@ Modify the body of this function to complete the functionality of
   //@@ the scan on the device
@@ -73,11 +73,7 @@ __global__ void scan(int *input, int *output, int *aux, int len)
     XY[threadIdx.x] = input[index];
     XY[threadIdx.x + BLOCK_SIZE] = 0;
   }
-  else
-  {
-    XY[threadIdx.x] = 0;
-    XY[threadIdx.x + BLOCK_SIZE] = 0;
-  }
+
   __syncthreads();
 
   reduction(XY, len);
@@ -161,7 +157,7 @@ int main(int argc, char **argv)
 
   //@@ Modify this to complete the functionality of the scan
   //@@ on the device
-  scan<<<dimGrid, dimBlock>>>(deviceInput, deviceOutput, deviceAuxArray, numElements);
+  scan<<<dimGrid, dimBlock>>>(deviceInput, deviceOutput, numElements);
 
   cudaDeviceSynchronize();
 

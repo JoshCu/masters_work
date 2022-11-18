@@ -32,11 +32,10 @@
 // Output its prefix sum = {lst[0], lst[0] + lst[1], lst[0] + lst[1] + ...
 // + lst[n-1]}
 
-#define BLOCK_SIZE 256 //@@ You can change this
+#define BLOCK_SIZE 64 //@@ You can change this
 
-__device__ void reduction(int *input, int n)
+__device__ void downsweep(int *input, int n)
 {
-  // XY[2*BLOCK_SIZE] is in shared memory
   for (unsigned int stride = 1; stride <= BLOCK_SIZE; stride <<= 1)
   {
     int index = (threadIdx.x + 1) * (stride << 1) - 1;
@@ -46,7 +45,7 @@ __device__ void reduction(int *input, int n)
   }
 }
 
-__device__ void post_reduction(int *input, int n)
+__device__ void upsweep(int *input, int n)
 {
   for (unsigned int stride = BLOCK_SIZE / 2; stride > 0; stride >>= 1)
   {
@@ -66,22 +65,29 @@ __global__ void scan(int *input, int *output, int len)
   //@@ You may need multiple kernel calls; write your kernels before this
   //@@ function and call them from here
   // load input into shared memory
-  __shared__ int XY[2 * BLOCK_SIZE];
+  __shared__ int sdata[BLOCK_SIZE * 2];
   int index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index < len)
   {
-    XY[threadIdx.x] = input[index];
-    XY[threadIdx.x + BLOCK_SIZE] = 0;
+    sdata[threadIdx.x] = input[index];
+    sdata[threadIdx.x + BLOCK_SIZE] = input[index + BLOCK_SIZE];
+  }
+  else
+  {
+    sdata[threadIdx.x] = 0;
+    sdata[threadIdx.x + BLOCK_SIZE] = 0;
   }
 
   __syncthreads();
 
-  reduction(XY, len);
-  post_reduction(XY, len);
+  downsweep(sdata, len);
+  upsweep(sdata, len);
   __syncthreads();
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  if (i < len)
-    output[i] = XY[threadIdx.x];
+
+  if (index < len)
+    output[index] = sdata[threadIdx.x];
+  if (index + BLOCK_SIZE < len)
+    output[index + BLOCK_SIZE] = sdata[threadIdx.x + BLOCK_SIZE];
 }
 
 int main(int argc, char **argv)
@@ -149,7 +155,7 @@ int main(int argc, char **argv)
   printf("Copying input memory to the GPU: %f ms\n", stw.getTime());
 
   //@@ Initialize the grid and block dimensions here
-  dim3 dimGrid(1, 1, 1);
+  dim3 dimGrid(ceil(numElements / (float)(BLOCK_SIZE << 1)), 1, 1);
   dim3 dimBlock(BLOCK_SIZE, 1, 1);
 
   stw.reset();
@@ -157,6 +163,14 @@ int main(int argc, char **argv)
 
   //@@ Modify this to complete the functionality of the scan
   //@@ on the device
+
+  // print grid and block dimensions
+  if (blog)
+  {
+    printf("Grid dimensions: %i %i %i, Block dimensions: %i %i %i", dimGrid.x,
+           dimGrid.y, dimGrid.z, dimBlock.x, dimBlock.y, dimBlock.z);
+  }
+
   scan<<<dimGrid, dimBlock>>>(deviceInput, deviceOutput, numElements);
 
   cudaDeviceSynchronize();

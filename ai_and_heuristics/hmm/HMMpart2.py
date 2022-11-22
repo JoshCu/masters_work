@@ -17,11 +17,11 @@ def initialise_transition_matrix(tiles, filename = "transitionProb10.csv"):
     with open(filename, 'r') as f:
         lines = f.readlines()
         for line in lines[1:]:
-            x = int(float(line.split(',')[0]))
+            x = tiles - int(float(line.split(',')[0])) -1
             y = int(float(line.split(',')[1]))
-            up = float(line.split(',')[2])
+            up = float(line.split(',')[4])
             right = float(line.split(',')[3])
-            down = float(line.split(',')[4])
+            down = float(line.split(',')[2])
             left = float(line.split(',')[5])
             transition_matrix[x][y][0] = up
             transition_matrix[x][y][1] = down
@@ -71,11 +71,10 @@ def print_grid(grid):
         print()
 
 def calculate_new_probability(grid, trans_m, X, Y, probability, grid_size):
-    # calculate new probability
-    # get each surrounding tile
+    # calculate new probability get each surrounding tile
     # calculate the probability of the agent transitioning from the surrounding tile to the current tile
-    # multiply the probability of the agent transitioning from the surrounding tile to the current tile by the probability of the agent being in the surrounding tile
-    # add the probabilities of the agent being in the surrounding tiles to get the new probability of the agent being in the current tile
+    # multiply that  by the probability of the agent being in the surrounding tile
+    # add all of these together and multiply by the probability of the agent being in the current tile
 
     # wrap around if the agent is at the edge of the grid using grid size
     X_up = (X - 1) % grid_size
@@ -83,13 +82,12 @@ def calculate_new_probability(grid, trans_m, X, Y, probability, grid_size):
     Y_left = (Y - 1) % grid_size
     Y_right = (Y + 1) % grid_size
     
-    up = grid[X_up][Y]
-    down = grid[X_down][Y]
+    above = grid[X_up][Y]
+    below = grid[X_down][Y]
     left = grid[X][Y_left]
     right = grid[X][Y_right]
 
-    # calculate the probability of the agent transitioning from the surrounding tile to the current
-    return (up*trans_m[X_up][Y][0] + down*trans_m[X_down][Y][1] + left*trans_m[X][Y_left][2] + right*trans_m[X][Y_right][3])*probability
+    return (above*trans_m[X_up][Y][1] + below*trans_m[X_down][Y][0] + left*trans_m[X][Y_left][3] + right*trans_m[X][Y_right][2])*probability
 
 def print_guess(grid):
     # print grid location of highest probability
@@ -106,7 +104,7 @@ def print_guess(grid):
     # (0,0) is bottom left, not top left
     # pandas is backwards and I will die on this hill
     converted_x = max_y
-    converted_y = tiles - max_x - 1
+    converted_y = (tiles - max_x) - 1
     print("max probability is at: ", converted_x, converted_y)
 
 if __name__ == "__main__":

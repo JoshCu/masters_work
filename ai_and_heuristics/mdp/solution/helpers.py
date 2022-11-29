@@ -1,3 +1,15 @@
+"""
+This file contains some helpers to load the policy and display the utility grid
+   as well as dealing with the translation of notation for policy action direction
+"""
+
+__author__ = 'Josh Cunningham'
+__copyright__ = 'Copyright 2022, MDP'
+__email__ = 'Josh.Cu@gmail.com'
+
+import csv
+
+
 def int_to_action(n):
     '''
     convert wacky number into up, right, down, left
@@ -76,3 +88,12 @@ def assignment_out(array):
         output.append(r)
     print(output)
     return output
+
+
+def write_policy(value, file="expectimax.csv"):
+    '''
+    Helper function to save the output to csv
+    '''
+    with open(file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerows(value)

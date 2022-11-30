@@ -17,16 +17,16 @@ def initialise_transition_matrix(tiles, filename = "transitionProb10.csv"):
     with open(filename, 'r') as f:
         lines = f.readlines()
         for line in lines[1:]:
-            x = tiles - int(float(line.split(',')[0])) -1
-            y = int(float(line.split(',')[1]))
+            row = tiles - int(float(line.split(',')[1])) -1
+            col = int(float(line.split(',')[0]))
             up = float(line.split(',')[4])
             right = float(line.split(',')[3])
             down = float(line.split(',')[2])
             left = float(line.split(',')[5])
-            transition_matrix[x][y][0] = up
-            transition_matrix[x][y][1] = down
-            transition_matrix[x][y][2] = left
-            transition_matrix[x][y][3] = right
+            transition_matrix[row][col][0] = up
+            transition_matrix[row][col][1] = down
+            transition_matrix[row][col][2] = left
+            transition_matrix[row][col][3] = right
     return transition_matrix
 
 
@@ -70,24 +70,24 @@ def print_grid(grid):
             print(grid[i][j], end=' ')
         print()
 
-def calculate_new_probability(grid, trans_m, X, Y, probability, grid_size):
+def calculate_new_probability(grid, trans_m, Row, Col, probability, grid_size):
     # calculate new probability get each surrounding tile
     # calculate the probability of the agent transitioning from the surrounding tile to the current tile
     # multiply that  by the probability of the agent being in the surrounding tile
     # add all of these together and multiply by the probability of the agent being in the current tile
 
     # wrap around if the agent is at the edge of the grid using grid size
-    X_up = (X - 1) % grid_size
-    X_down = (X + 1) % grid_size
-    Y_left = (Y - 1) % grid_size
-    Y_right = (Y + 1) % grid_size
+    Row_up = (Row - 1) % grid_size
+    Row_down = (Row + 1) % grid_size
+    Col_left = (Col - 1) % grid_size
+    Col_right = (Col + 1) % grid_size
     
-    above = grid[X_up][Y]
-    below = grid[X_down][Y]
-    left = grid[X][Y_left]
-    right = grid[X][Y_right]
+    above = grid[Row_up][Col]
+    below = grid[Row_down][Col]
+    left = grid[Row][Col_left]
+    right = grid[Row][Col_right]
 
-    return (above*trans_m[X_up][Y][1] + below*trans_m[X_down][Y][0] + left*trans_m[X][Y_left][3] + right*trans_m[X][Y_right][2])*probability
+    return (above*trans_m[Row_up][Col][1] + below*trans_m[Row_down][Col][0] + left*trans_m[Row][Col_left][3] + right*trans_m[Row][Col_right][2])*probability
 
 def print_guess(grid):
     # print grid location of highest probability
@@ -111,12 +111,15 @@ if __name__ == "__main__":
 
 # read input from command line arguments
     import sys
-    if len(sys.argv) != 4:
-        print("Usage: python3 HMMpart2.py <sensor_reading_file> <transition_matrix_file> <time_steps>")
-        exit()
-    sensor_reading_file = sys.argv[1]
-    transition_matrix_file = sys.argv[2]
-    steps = int(sys.argv[3])
+    # if len(sys.argv) != 4:
+    #     print("Usage: python3 HMMpart2.py <sensor_reading_file> <transition_matrix_file> <time_steps>")
+    #     exit()
+    # sensor_reading_file = sys.argv[1]
+    # transition_matrix_file = sys.argv[2]
+    # steps = int(sys.argv[3]) -1
+    sensor_reading_file = "movingCarReading10.csv"
+    transition_matrix_file = "transitionProb10.csv"
+    steps = 20
 
     file = open(sensor_reading_file, 'r')
     lines = file.readlines()
@@ -124,7 +127,7 @@ if __name__ == "__main__":
     tiles = int(lines[1].split(',')[3])
     time = steps
     counter = 0
-    std = 2/3
+    std = 0.1
     grid = initialise_grid(tiles,tiles)
 
     transition_matrix = initialise_transition_matrix(tiles, transition_matrix_file)
@@ -136,18 +139,24 @@ if __name__ == "__main__":
         agentX = int(line.split(',')[0])
         agentY = int(line.split(',')[1])
         emission = float(line.split(',')[2])
+        agentRow = tiles - agentY - 1
+        agentCol = agentX
 
-        for x in range(tiles):
-            for y in range(tiles):
-                distance = math.sqrt(math.pow(agentX-x,2)+ math.pow(agentY-y,2))
+        for row in range(tiles):
+            for col in range(tiles):
+                distance = math.sqrt(math.pow(agentRow-row,2)+ math.pow(agentCol-col,2))
                 probability = norm.pdf(emission, distance, std)
-                grid[x][y] = calculate_new_probability(last_grid, transition_matrix, x, y, probability, tiles)
+                current_tile_probability = grid[row][col] * probability
+                grid[row][col] = calculate_new_probability(last_grid, transition_matrix, row, col, current_tile_probability, tiles)
         #normalise grid  
         grid = normalise_grid(grid)
 
         last_grid = copy.deepcopy(grid)
         
         counter +=1
+
+    # rotate grid 90 degrees clockwise 
+    #grid = list(zip(*grid[::-1]))
 
     print_grid(grid)
 

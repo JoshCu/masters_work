@@ -111,15 +111,15 @@ if __name__ == "__main__":
 
 # read input from command line arguments
     import sys
-    # if len(sys.argv) != 4:
-    #     print("Usage: python3 HMMpart2.py <sensor_reading_file> <transition_matrix_file> <time_steps>")
-    #     exit()
-    # sensor_reading_file = sys.argv[1]
-    # transition_matrix_file = sys.argv[2]
-    # steps = int(sys.argv[3]) -1
-    sensor_reading_file = "movingCarReading10.csv"
-    transition_matrix_file = "transitionProb10.csv"
-    steps = 20
+    if len(sys.argv) != 4:
+        print("Usage: python3 HMMpart2.py <sensor_reading_file> <transition_matrix_file> <time_steps>")
+        exit()
+    sensor_reading_file = sys.argv[1]
+    transition_matrix_file = sys.argv[2]
+    steps = int(sys.argv[3]) -1
+    # sensor_reading_file = "movingCarReading10.csv"
+    # transition_matrix_file = "transitionProb10.csv"
+    # steps = 20
 
     file = open(sensor_reading_file, 'r')
     lines = file.readlines()
